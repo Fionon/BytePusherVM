@@ -70,32 +70,27 @@ void wait_tick() {
 
 void get_input(vector<unsigned char> &RAM) {
     SDL_Event event;
-    // while (SDL_PollEvent(&event)) {
-    //         if (event.type == SDL_QUIT) {
-    //             return;
-    //         }
-    //     }
     SDL_PumpEvents(); 
     const Uint8 *keyboardState = SDL_GetKeyboardState(NULL);
 
     RAM[INPUT] = 0;
     RAM[INPUT+1] = 0;
-    if (keyboardState[SDL_SCANCODE_0]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1;
-    if (keyboardState[SDL_SCANCODE_1]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 1;
-    if (keyboardState[SDL_SCANCODE_2]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 2;
-    if (keyboardState[SDL_SCANCODE_3]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 3;
-    if (keyboardState[SDL_SCANCODE_4]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 4;
-    if (keyboardState[SDL_SCANCODE_5]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 5;
-    if (keyboardState[SDL_SCANCODE_6]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 6;
-    if (keyboardState[SDL_SCANCODE_7]) RAM[INPUT+1] = RAM[INPUT+1] | 0b1 << 7;
-    if (keyboardState[SDL_SCANCODE_8]) RAM[INPUT] = RAM[INPUT] | 0b1;
-    if (keyboardState[SDL_SCANCODE_9]) RAM[INPUT] = RAM[INPUT] | 0b1 << 1;
-    if (keyboardState[SDL_SCANCODE_B]) RAM[INPUT] = RAM[INPUT] | 0b1 << 2;
-    if (keyboardState[SDL_SCANCODE_C]) RAM[INPUT] = RAM[INPUT] | 0b1 << 3;
-    if (keyboardState[SDL_SCANCODE_D]) RAM[INPUT] = RAM[INPUT] | 0b1 << 4;
-    if (keyboardState[SDL_SCANCODE_A]) RAM[INPUT] = RAM[INPUT] | 0b1 << 5;
-    if (keyboardState[SDL_SCANCODE_E]) RAM[INPUT] = RAM[INPUT] | 0b1 << 6;
-    if (keyboardState[SDL_SCANCODE_F]) RAM[INPUT] = RAM[INPUT] | 0b1 << 7;
+
+    const SDL_Scancode keys[] = {
+        SDL_SCANCODE_0, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, 
+        SDL_SCANCODE_4, SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, 
+        SDL_SCANCODE_8, SDL_SCANCODE_9, SDL_SCANCODE_B, SDL_SCANCODE_C, 
+        SDL_SCANCODE_D, SDL_SCANCODE_A, SDL_SCANCODE_E, SDL_SCANCODE_F
+    };
+    for (int i = 0; i < 8; ++i) {
+        if (keyboardState[keys[i]]) {
+            RAM[INPUT+1] |= (0b1 << i);
+        }
+        if (keyboardState[keys[i+8]]) {
+            RAM[INPUT] |= (0b1 << i);
+        }
+    }
+
     cout << (int)RAM[INPUT] <<  " " << (int)RAM[INPUT+1] << endl;
 }
 
