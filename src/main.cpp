@@ -19,12 +19,11 @@ void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer);
 void send_audio();
 
 Uint32 timerCallback(Uint32 interval, void *param) {
-    // cout << "timerCallback is called" << endl;
     if (isWaiting == true) isWaiting = false;
     return interval;
 }
 vector<unsigned char> loadROM() {
-    ifstream file("rom/nyan.bp", ios::binary);
+    ifstream file("rom/PaletteTest.BytePusher", ios::binary);
     if (!file) {
         cerr << "Error opening file\n";
     }
@@ -59,6 +58,7 @@ int main() {
     SDL_TimerID timerID = SDL_AddTimer(1000, timerCallback, &isWaiting);
     SDL_CreateWindowAndRenderer(256,256,0, &window, &renderer);
 
+    SDL_SetWindowTitle(window, "Alvan, Fion - Bytepusher");
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderClear(renderer);
 
@@ -72,16 +72,16 @@ int main() {
         send_audio();
     }
 
+    // Cleanup
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     SDL_RemoveTimer(timerID);
     return 0;
 }
 
 void wait_tick() {
     isWaiting = true;
-    cout << "in wait_tick" << endl;
-    while (isWaiting == true) {
-
-    }
+    while (isWaiting == true) {}
 }
 
 void get_input(vector<unsigned char> &RAM) {
