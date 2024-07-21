@@ -10,4 +10,4 @@ Make sure you have SDL2 installed, then run:
 ### Example Outputs
 
 ![Palette Test](/images/bytepusher_palette_test.png)
-![Palette Test](/images/bytepusher_nyan_cat.png)
+![Nyan Cat](/images/bytepusher_nyan_cat.png)
