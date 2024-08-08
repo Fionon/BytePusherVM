@@ -20,7 +20,7 @@ void wait_tick();
 void get_input(vector<unsigned char> &RAM);
 void cpu(vector<unsigned char> &RAM);
 void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Texture* texture);
-void send_audio();
+void send_audio(vector<unsigned char> &RAM, SDL_AudioStream* stream);
 
 Uint32 timerCallback(Uint32 interval, void *param) {
     {
@@ -31,7 +31,7 @@ Uint32 timerCallback(Uint32 interval, void *param) {
     return interval;
 }
 vector<unsigned char> loadROM() {
-    ifstream file("rom/KeyboardTest.BytePusher", ios::binary);
+    ifstream file("rom/AudioTest.BytePusher", ios::binary);
     if (!file) {
         cerr << "Error opening file\n";
     }
@@ -59,14 +59,14 @@ vector<unsigned char> loadROM() {
 int main() {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
-    SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_EVERYTHING);
     SDL_TimerID timerID = SDL_AddTimer(1000/60, timerCallback, nullptr);
     SDL_CreateWindowAndRenderer(256,256,0, &window, &renderer);
     SDL_Texture* texture = SDL_CreateTexture(renderer,
                                SDL_PIXELFORMAT_RGBA8888,
                                SDL_TEXTUREACCESS_STREAMING,
                                256, 256); 
-
+    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S8, 1, 15360, AUDIO_S8, 1, 15360);
     SDL_SetWindowTitle(window, "Alvan, Fion - Bytepusher");
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderClear(renderer);
@@ -84,7 +84,7 @@ int main() {
         get_input(RAM);
         cpu(RAM);
         send_graphics(RAM, renderer, texture);
-        send_audio();
+        send_audio(RAM, stream);
     }
 
     // Cleanup
@@ -165,6 +165,10 @@ void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Textu
 
 }
 
-void send_audio() {
-    
+void send_audio(vector<unsigned char> &RAM, SDL_AudioStream* stream) {
+    unsigned int audio_start = RAM[AUDIO] << 16 | RAM[AUDIO + 1] << 8;
+    for (int x = 0; x < 256; ++x) {
+        unsigned char onesample = RAM[audio_start | x];
+        SDL_AudioStreamPut(stream, &onesample, sizeof (unsigned char)); 
+    }
 }
