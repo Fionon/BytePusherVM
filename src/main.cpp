@@ -20,7 +20,7 @@ void wait_tick();
 void get_input(vector<unsigned char> &RAM);
 void cpu(vector<unsigned char> &RAM);
 void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Texture* texture);
-void send_audio(vector<unsigned char> &RAM, SDL_AudioStream* stream);
+void send_audio(vector<unsigned char> &RAM, SDL_AudioDeviceID audioId);
 
 Uint32 timerCallback(Uint32 interval, void *param) {
     {
@@ -31,7 +31,7 @@ Uint32 timerCallback(Uint32 interval, void *param) {
     return interval;
 }
 vector<unsigned char> loadROM() {
-    ifstream file("rom/AudioTest.BytePusher", ios::binary);
+    ifstream file("rom/KeyboardTest.BytePusher", ios::binary);
     if (!file) {
         cerr << "Error opening file\n";
     }
@@ -44,7 +44,7 @@ vector<unsigned char> loadROM() {
     fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    // reserve capacity
+    // reserve capacity:
     vector<unsigned char> RAM;
     RAM.reserve(16*1024*1024 + 8);
     // read the data:
@@ -66,11 +66,18 @@ int main() {
                                SDL_PIXELFORMAT_RGBA8888,
                                SDL_TEXTUREACCESS_STREAMING,
                                256, 256); 
-    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S8, 1, 15360, AUDIO_S8, 1, 15360);
+    SDL_AudioSpec want, have;
+    want.freq = 15360;
+    want.format = AUDIO_S8;
+    want.channels = 1;
+    want.samples = 256;
+    want.callback = NULL;
+    
+    SDL_AudioDeviceID audioId = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
     SDL_SetWindowTitle(window, "Alvan, Fion - Bytepusher");
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderClear(renderer);
-
+    SDL_PauseAudioDevice(audioId, 0);
     vector<unsigned char> RAM = loadROM();
     SDL_Event e;
     bool quit = false;
@@ -84,10 +91,12 @@ int main() {
         get_input(RAM);
         cpu(RAM);
         send_graphics(RAM, renderer, texture);
-        send_audio(RAM, stream);
+        send_audio(RAM, audioId);
     }
 
     // Cleanup
+    SDL_PauseAudioDevice(audioId, 1);
+    SDL_CloseAudioDevice(audioId);
     SDL_DestroyWindow(window);
     SDL_Quit();
     SDL_RemoveTimer(timerID);
@@ -99,7 +108,6 @@ void wait_tick() {
 }
 
 void get_input(vector<unsigned char> &RAM) {
-    SDL_Event event;
     SDL_PumpEvents(); 
     const Uint8 *keyboardState = SDL_GetKeyboardState(NULL);
 
@@ -128,8 +136,8 @@ void cpu(vector<unsigned char> &RAM) {
     unsigned int pc_index =  RAM[PC]<<16 | RAM[PC+1]<<8 | RAM[PC+2]; // address of our instruction
     for (int i = 0; i < 65536; i++) {
    
-        unsigned int A = RAM[pc_index]<<16 | RAM[pc_index+1]<<8 | RAM[pc_index+2]; // 100
-        unsigned int B = RAM[pc_index+3]<<16 | RAM[pc_index+4]<<8 | RAM[pc_index+5]; // 120
+        unsigned int A = RAM[pc_index]<<16 | RAM[pc_index+1]<<8 | RAM[pc_index+2];
+        unsigned int B = RAM[pc_index+3]<<16 | RAM[pc_index+4]<<8 | RAM[pc_index+5]; 
         
         RAM[B] = RAM[A];
 
@@ -138,12 +146,12 @@ void cpu(vector<unsigned char> &RAM) {
 }
 
 void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Texture* texture) {
-    unsigned char ZZ = RAM[5];
+    unsigned char ZZ = RAM[GRAPHIC];
 
     Uint32 frameBuffer[256*256];
     
-    for (int y = 0; y<256; ++y) {
-        for (int x=0; x<256; ++x) {
+    for (int y = 0; y < 256; ++y) {
+        for (int x = 0; x < 256; ++x) {
             unsigned char pixel = RAM[(ZZ << 16) + (y << 8) + x]; // 0xZZYYXX
             if (pixel >= 216) {
                 frameBuffer[x+y*256] = 255;
@@ -165,10 +173,7 @@ void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Textu
 
 }
 
-void send_audio(vector<unsigned char> &RAM, SDL_AudioStream* stream) {
+void send_audio(vector<unsigned char> &RAM, SDL_AudioDeviceID audioId) {
     unsigned int audio_start = RAM[AUDIO] << 16 | RAM[AUDIO + 1] << 8;
-    for (int x = 0; x < 256; ++x) {
-        unsigned char onesample = RAM[audio_start | x];
-        SDL_AudioStreamPut(stream, &onesample, sizeof (unsigned char)); 
-    }
+    SDL_QueueAudio(audioId, &RAM[audio_start], 256);
 }
