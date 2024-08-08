@@ -31,7 +31,7 @@ Uint32 timerCallback(Uint32 interval, void *param) {
     return interval;
 }
 vector<unsigned char> loadROM() {
-    ifstream file("rom/ScrollingLogo.BytePusher", ios::binary);
+    ifstream file("rom/KeyboardTest.BytePusher", ios::binary);
     if (!file) {
         cerr << "Error opening file\n";
     }
@@ -109,8 +109,8 @@ void get_input(vector<unsigned char> &RAM) {
     const SDL_Scancode keys[] = {
         SDL_SCANCODE_0, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, 
         SDL_SCANCODE_4, SDL_SCANCODE_5, SDL_SCANCODE_6, SDL_SCANCODE_7, 
-        SDL_SCANCODE_8, SDL_SCANCODE_9, SDL_SCANCODE_B, SDL_SCANCODE_C, 
-        SDL_SCANCODE_D, SDL_SCANCODE_A, SDL_SCANCODE_E, SDL_SCANCODE_F
+        SDL_SCANCODE_8, SDL_SCANCODE_9, SDL_SCANCODE_A, SDL_SCANCODE_B, 
+        SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E, SDL_SCANCODE_F
     };
     
     for (int i = 0; i < 8; ++i) {
