@@ -2,7 +2,8 @@
 #include <vector>
 #include <SDL2/SDL.h>
 #include <fstream>
-#include <semaphore>
+#include <mutex>
+#include <condition_variable>
 
 using namespace std;
 
@@ -11,7 +12,9 @@ const int PC = 0x2;
 const int GRAPHIC = 0x5;
 const int AUDIO = 0x6;
 
-binary_semaphore sem(1);
+mutex mtx;
+condition_variable cv;
+bool ready = false;
 
 void wait_tick();
 void get_input(vector<unsigned char> &RAM);
@@ -20,7 +23,11 @@ void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Textu
 void send_audio();
 
 Uint32 timerCallback(Uint32 interval, void *param) {
-    sem.release();
+    {
+        unique_lock<mutex> lck(mtx);
+        ready = true;
+    }
+    cv.notify_one();
     return interval;
 }
 vector<unsigned char> loadROM() {
@@ -73,15 +80,10 @@ int main() {
                 quit = true;
             }
         }
-        cout << SDL_GetTicks() << "waiting for tick" << endl;
         wait_tick();
-        cout << SDL_GetTicks() <<"getting input" << endl;
         get_input(RAM);
-        cout << SDL_GetTicks() << "running cpu" << endl;
         cpu(RAM);
-        cout << SDL_GetTicks() << "sending graphics" << endl;
         send_graphics(RAM, renderer, texture);
-        cout << SDL_GetTicks() << "finished graphics" << endl;
         send_audio();
     }
 
@@ -91,9 +93,9 @@ int main() {
     SDL_RemoveTimer(timerID);
     return 0;
 }
-
 void wait_tick() {
-    sem.acquire();
+    unique_lock<mutex> lck(mtx);
+    cv.wait(lck,[]{return ready;});
 }
 
 void get_input(vector<unsigned char> &RAM) {
@@ -122,42 +124,28 @@ void get_input(vector<unsigned char> &RAM) {
 }
 
 void cpu(vector<unsigned char> &RAM) {
+
+    unsigned int pc_index =  RAM[PC]<<16 | RAM[PC+1]<<8 | RAM[PC+2]; // address of our instruction
     for (int i = 0; i < 65536; i++) {
-        // if (i < 3) {
-        // for (int x = 0; x < 1000; x ++) {
-        //     cout << "|" << x << ": "<<(unsigned int)RAM[x] << "| " ;
-        // }
-        // cout << endl;
-        // }
-        unsigned int pc_index =  RAM[PC]<<16 | RAM[PC+1]<<8 | RAM[PC+2]; // address of our instruction
+   
         unsigned int A = RAM[pc_index]<<16 | RAM[pc_index+1]<<8 | RAM[pc_index+2]; // 100
         unsigned int B = RAM[pc_index+3]<<16 | RAM[pc_index+4]<<8 | RAM[pc_index+5]; // 120
         
-        RAM[B] = RAM[A]; // set B to A
+        RAM[B] = RAM[A];
 
-        RAM[PC] = RAM[pc_index + 6];
-        RAM[PC+1] = RAM[pc_index + 7];
-        RAM[PC+2] = RAM[pc_index + 8];
-        // unsigned int next_index = RAM[PC]<<16 | RAM[PC+1]<<8 | RAM[PC+2];
-        // if (i <3 ) {
-
-        // cout <<pc_index << " " << next_index << endl;
-        // }
+        pc_index =  RAM[pc_index+6]<<16 | RAM[pc_index+7]<<8 | RAM[pc_index+8];
     }
 }
 
 void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Texture* texture) {
     unsigned char ZZ = RAM[5];
 
-    // vector<unsigned char> RAM;
-    // RAM.reserve(fileSize);
     Uint32 frameBuffer[256*256];
     
     for (int y = 0; y<256; ++y) {
         for (int x=0; x<256; ++x) {
             unsigned char pixel = RAM[(ZZ << 16) + (y << 8) + x]; // 0xZZYYXX
             if (pixel >= 216) {
-                // SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 frameBuffer[x+y*256] = 255;
             }
             else {
@@ -166,22 +154,15 @@ void send_graphics(vector<unsigned char> &RAM, SDL_Renderer* renderer, SDL_Textu
                 int red = (pixel - blue - green * 6 ) / 36;
                 frameBuffer[x+y*256] = (Uint32)(red * 0x33 << 24 | green * 0x33 << 16 | blue * 0x33 << 8 | 255);
                 if (frameBuffer[x+y*256] != 255) {
-                    // cout << frameBuffer[x+y*256] << " ";
                 }
-                //1714644735
-                //
-                // SDL_SetRenderDrawColor(renderer, red * 0x33, green * 0x33, blue * 0x33, 255);
             }
-            // SDL_RenderDrawPoint(renderer, x, y);
         }
     }
-    // cout << "-------" << endl;
     SDL_RenderClear(renderer);
     SDL_UpdateTexture(texture, NULL, frameBuffer, 256 * sizeof(Uint32));
     SDL_RenderCopy(renderer, texture, 0, 0);
     SDL_RenderPresent(renderer);
 
-    // cout << "Render" << endl;
 }
 
 void send_audio() {

@@ -4,7 +4,7 @@ CC = g++
 SRC_FILES = ${wildcard ${SRC_DIR}/*.cpp}
 OBJ_NAME = bytepusher
 LIBRARY_PATHS = -lSDL2
-COMPILER_FLAGS = -std=c++20 -Wall -O0 -g
+COMPILER_FLAGS = -std=c++11 -Wall -O0 -g
 
 all:
 	${CC} ${COMPILER_FLAGS} ${LIBRARY_PATHS} ${SRC_FILES} -o ${BUILD_DIR}/${OBJ_NAME}
